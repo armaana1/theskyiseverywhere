@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Images</title>
+    <style>
+        /* Reset default margin and padding */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Fullscreen container */
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Container for images side by side */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Style for the left and right halves */
+        .half {
+            width: 50%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none; /* Remove underline */
+        }
+
+        /* Style for images to fully fit their half */
+        .half img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Important to cover the area */
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Link to day.html on the right half -->
+        <a href="daysky.html" class="half">
+            <img src="dayskyclick.png" alt="Day Sky">
+        </a>
+
+        <!-- Link to nightsky.html on the left half -->
+        <a href="nightsky.html" class="half">
+            <img src="nightskyclick.png" alt="Night Sky">
+        </a>
+    </div>
+
+</body>
+</html>

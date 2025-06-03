@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixed Drag and Drop Full Screen with Drawing Pen</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Background (night.png) */
+    #nightBackground {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Clouds (nclouds.png) */
+    #clouds {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 2;
+    }
+
+    /* Full-screen dand image */
+    #dandBackground {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 3;
+    }
+
+    /* Moon full screen (lowered) */
+    #moon {
+      position: absolute;
+      top: 30%;  /* Adjust the percentage to lower the moon image */
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 4;
+    }
+
+    /* Full-screen pysnight image above moon.png */
+    #pysnightBackground {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 5;
+    }
+
+    /* Draggable items */
+    .draggable {
+      position: absolute;
+      cursor: grab;
+      object-fit: cover;
+      z-index: 10;  /* Higher z-index to make sure they are above background images */
+      user-select: none;
+    }
+
+    /* Pen image */
+    #pen {
+      width: 100px;
+      height: 100px;
+      top: 150px;  /* Make it clearly visible on the screen */
+      left: 100px; /* Adjust its left position */
+      z-index: 15; /* Higher z-index to make sure the pen is visible on top */
+      cursor: pointer;
+    }
+
+    /* Hide audio player */
+    audio {
+      display: none;
+    }
+
+    /* Yellow trail dot */
+    .trail-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: yellow;  /* Yellow dot color */
+      border-radius: 50%;         /* Make it circular */
+      pointer-events: none;
+      z-index: 11;                /* Ensure the dots are above other content */
+      opacity: 0.8;
+      animation: fadeOut 0.5s forwards;
+    }
+
+    /* Animation for fading out trail dot */
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+    }
+
+    /* Yellow drawing line */
+    .drawing-line {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background-color: yellow;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: fadeOut 20s forwards;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background images -->
+<img id="nightBackground" src="night.png" alt="Night Background">
+<img id="clouds" src="nclouds.png" alt="Clouds">
+<img id="dandBackground" src="dand.png" alt="Dand Background">
+<img id="moon" src="moon.png" alt="Moon">
+
+<!-- Full-screen pysnight image above moon.png -->
+<img id="pysnightBackground" src="pysnight.png" alt="Pysnight Background">
+
+<!-- Pen image for drawing -->
+<img id="pen" src="pen.png" alt="Pen" class="draggable">
+
+<!-- Background music -->
+<audio id="backgroundMusic" src="night.mp3" loop></audio>
+
+<script>
+  const images = [];
+  const initialPositions = [];
+  let draggedItem = null;
+  let shiftX = 0;
+  let shiftY = 0;
+  let isAudioPlaying = false;
+  let isDrawing = false;
+  let canDraw = false;  // Flag to allow drawing after double-clicking the pen
+  let canvas = document.createElement("canvas");
+  let context = canvas.getContext("2d");
+
+  // Function to play audio
+  function playAudio() {
+    const backgroundMusic = document.getElementById('backgroundMusic');
+    
+    // Only play if audio isn't already playing
+    if (!isAudioPlaying) {
+      backgroundMusic.play().then(() => {
+        isAudioPlaying = true; // Set audio as playing
+        console.log('Audio started playing');
+      }).catch(function(error) {
+        console.log("Error playing audio:", error);
+      });
+    }
+  }
+
+  // Wait for a user interaction (click anywhere) to play the audio
+  document.addEventListener('click', function() {
+    playAudio();
+    document.removeEventListener('click', arguments.callee);  // Remove the event listener after the first click
+  });
+
+  // Reset the audio every 90 seconds after it starts playing
+  function resetAudio() {
+    const backgroundMusic = document.getElementById('backgroundMusic');
+    setInterval(() => {
+      if (isAudioPlaying) {
+        backgroundMusic.currentTime = 0; // Restart the audio
+        backgroundMusic.play().catch(function(error) {
+          console.log("Error playing audio on reset:", error);
+        });
+      }
+    }, 90000); // Reset every 90 seconds
+  }
+
+  // Load images (49 to 74)
+  for (let i = 49; i <= 74; i++) {
+    const img = document.createElement('img');
+    img.src = `${i}.PNG`;
+    img.className = 'draggable';
+
+    img.onload = function() {
+      document.body.appendChild(img);
+
+      img.style.width = '100%';
+      img.style.height = '100%';
+
+      const leftPosition = 0;
+      const topPosition = 0;
+
+      img.style.left = leftPosition + 'px';
+      img.style.top = topPosition + 'px';
+
+      initialPositions.push({ left: leftPosition + 'px', top: topPosition + 'px' });
+      images.push(img);
+
+      // Drag start
+      img.addEventListener('mousedown', function(e) {
+        draggedItem = img;
+        shiftX = e.clientX - img.getBoundingClientRect().left;
+        shiftY = e.clientY - img.getBoundingClientRect().top;
+
+        draggedItem.style.cursor = 'grabbing';
+      });
+
+      img.ondragstart = () => false; // Disable default browser drag
+    };
+
+    img.onerror = function() {
+      console.log(`Failed to load image ${i}.PNG`);
+    };
+  }
+
+  // Handle double-click on pen to enable drawing
+  document.getElementById('pen').addEventListener('dblclick', function() {
+    canDraw = true;
+    alert('You can now draw with the pen!');  // Inform the user
+  });
+
+  // Handle drawing with the pen
+  document.getElementById('pen').addEventListener('mousedown', function() {
+    if (canDraw) {
+      isDrawing = true;
+      document.body.appendChild(canvas);
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      context.strokeStyle = 'yellow';
+      context.lineWidth = 5;
+      context.lineJoin = 'round';
+      context.lineCap = 'round';
+    }
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (isDrawing && canDraw) {
+      context.lineTo(e.clientX, e.clientY);
+      context.stroke();
+    }
+
+    // Create yellow trail dots when dragging
+    if (canDraw) {
+      const dot = document.createElement('div');
+      dot.className = 'trail-dot';
+      dot.style.left = (e.pageX - 5) + 'px';  // Center the dot at cursor
+      dot.style.top = (e.pageY - 5) + 'px';   // Center the dot at cursor
+      document.body.appendChild(dot);
+
+      // Remove the dot after animation ends
+      setTimeout(() => {
+        dot.remove();
+      }, 500);
+    }
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (isDrawing && canDraw) {
+      setTimeout(() => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        document.body.removeChild(canvas);
+      }, 20000); // Clear the canvas after 20 seconds
+      isDrawing = false;
+    }
+  });
+
+  // Handle drag movement for the pen
+  document.addEventListener('mousemove', function(e) {
+    if (draggedItem) {
+      draggedItem.style.left = (e.pageX - shiftX) + 'px';
+      draggedItem.style.top = (e.pageY - shiftY) + 'px';
+    }
+  });
+
+  // Drop the dragged item (pen) and reset its position
+  document.addEventListener('mouseup', function() {
+    if (draggedItem) {
+      draggedItem.style.cursor = 'grab';
+      draggedItem = null; // Drop the item
+    }
+  });
+
+  // Reset draggable positions every 90 seconds
+  setInterval(() => {
+    images.forEach((img, index) => {
+      img.style.left = initialPositions[index].left;
+      img.style.top = initialPositions[index].top;
+    });
+  }, 90000); // Reset every 90 seconds
+
+  // Once audio has played after user interaction, start the reset function
+  window.addEventListener('load', resetAudio);
+</script>
+
+</body>
+</html>

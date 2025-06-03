@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Draggable with Red Dot Trail</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: url('day.PNG') no-repeat center center fixed;
+      background-size: cover;
+      cursor: url('dcursor.png') 16 16, auto; /* Set custom dcursor.png cursor */
+      position: relative;
+      z-index: 10;  /* Ensure that the cursor is above everything */
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('clouds.PNG') no-repeat center center;
+      background-size: cover;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    #pysday {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 2;
+    }
+
+    .draggable {
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      cursor: grab;
+      z-index: 3;
+      user-select: none;
+    }
+
+    .draggable.front {
+      z-index: 4;
+    }
+
+    #staticImage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .trail-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: red;  /* Red dot color */
+      border-radius: 50%;     /* Circle shape */
+      pointer-events: none;
+      z-index: 5;
+      opacity: 0.8;
+      animation: fadeOut 0.5s forwards;
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: scale(0.5);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="overlay"></div>
+<img id="staticImage" src="drag and drop.PNG" alt="Drag and Drop">
+<img id="pysday" src="pysday.png" alt="Pysday Background">
+
+<audio id="backgroundAudio" loop>
+  <source src="day.mp3" type="audio/mp3">
+  Your browser does not support the audio element.
+</audio>
+
+<script>
+  const numberOfImages = 33;
+  const draggables = [];
+  const originalPositions = [];
+
+  let draggingImg = null;
+  let shiftX = 0;
+  let shiftY = 0;
+
+  window.onload = function() {
+    const audio = document.getElementById('backgroundAudio');
+    audio.play();
+  }
+
+  for (let i = 1; i <= numberOfImages; i++) {
+    if (i === 27) continue;
+
+    const img = document.createElement('img');
+    img.src = `${i}.PNG`;
+    img.className = 'draggable';
+    img.style.left = '0px';
+    img.style.top = '0px';
+    document.body.appendChild(img);
+
+    if (i >= 3 && i <= 6) {
+      img.classList.add('front');
+    }
+
+    originalPositions.push({ left: img.style.left, top: img.style.top });
+    draggables.push(img);
+
+    img.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      draggingImg = e.target;
+      shiftX = e.clientX - draggingImg.getBoundingClientRect().left;
+      shiftY = e.clientY - draggingImg.getBoundingClientRect().top;
+    });
+
+    img.ondragstart = function() {
+      return false;
+    };
+  }
+
+  document.addEventListener('mousemove', function(e) {
+    if (draggingImg) {
+      draggingImg.style.left = (e.pageX - shiftX) + 'px';
+      draggingImg.style.top = (e.pageY - shiftY) + 'px';
+
+      // Create a red dot trail
+      const dot = document.createElement('div');
+      dot.className = 'trail-dot';
+      dot.style.left = (e.pageX - 5) + 'px';  // Center the dot at cursor
+      dot.style.top = (e.pageY - 5) + 'px';   // Center the dot at cursor
+      document.body.appendChild(dot);
+
+      // Automatically remove the dot after animation ends
+      setTimeout(() => {
+        dot.remove();
+      }, 500);
+    }
+  });
+
+  document.addEventListener('mouseup', function() {
+    draggingImg = null;
+  });
+
+  setInterval(() => {
+    draggables.forEach((img, index) => {
+      img.style.left = originalPositions[index].left;
+      img.style.top = originalPositions[index].top;
+    });
+  }, 90000);
+
+  setInterval(() => {
+    const audio = document.getElementById('backgroundAudio');
+    audio.currentTime = 0;
+    audio.play();
+  }, 90000);
+</script>
+
+</body>
+</html>
